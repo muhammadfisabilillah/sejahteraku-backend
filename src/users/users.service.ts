@@ -5,21 +5,20 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. LIHAT PROFIL (Gabungkan tabel User + UserProfile)
+  // 1. LIHAT PROFIL (Perbaikan: Mengambil relasi profile)
   async getMyProfile(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        profile: true, // <--- INI KUNCINYA: Ambil data dari tabel UserProfile juga
+        profile: true, // <--- KITA AMBIL DARI TABEL SEBELAH (UserProfile)
       },
     });
   }
 
-  // 2. UPDATE PROFIL (Update User sekaligus Upsert Profile)
+  // 2. UPDATE PROFIL (Perbaikan: Pakai teknik Upsert ke tabel UserProfile)
   async updateProfile(userId: string, data: any) {
     
-    // Konversi Skills: Kalau dikirim "Las, Supir" (String), ubah jadi ["Las", "Supir"] (Array)
-    // Karena di Schema kamu tipe skills adalah String[]
+    // Jaga-jaga kalau skills dikirim sebagai string "Las, Supir"
     let skillsData = data.skills;
     if (typeof data.skills === 'string') {
       skillsData = data.skills.split(',').map(s => s.trim());
@@ -28,20 +27,18 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        // Data yang ada di tabel User
+        // Update data dasar di tabel User
         fullName: data.fullName,
-        phoneNumber: data.phoneNumber, 
+        phoneNumber: data.phoneNumber,
 
-        // Data yang ada di tabel UserProfile (Relasi)
+        // Update/Buat data di tabel UserProfile
         profile: {
           upsert: {
-            // Kalau profil belum ada, BUAT BARU
             create: {
               bio: data.bio,
               lastEdu: data.lastEdu,
               skills: skillsData || [],
             },
-            // Kalau profil sudah ada, UPDATE SAJA
             update: {
               bio: data.bio,
               lastEdu: data.lastEdu,
@@ -51,8 +48,8 @@ export class UsersService {
         },
       },
       include: {
-        profile: true // Tampilkan hasil updatenya
-      }
+        profile: true, // Kembalikan data profil terbaru
+      },
     });
   }
 }
