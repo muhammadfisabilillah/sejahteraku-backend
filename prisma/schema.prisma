@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  phoneNumber   String         @unique
+  password      String
+  fullName      String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  profile       UserProfile?
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  consultations Consultation[] // Relasi ke AI Chat
+}
+
+model UserProfile {
+  id      String   @id @default(uuid())
+  userId  String   @unique
+  user    User     @relation(fields: [userId], references: [id])
+  lastEdu String?
+  skills  String[]
+  bio     String?
+}
+
+model Company {
+  id          String       @id @default(uuid())
+  name        String
+  description String
+  isVerified  Boolean      @default(false)
+  courses     Course[]
+  jobs        JobPosting[]
+}
+
+model JobPosting {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  position     String
+  requirements String
+  salaryRange  String?
+  location     String
+  postedAt     DateTime @default(now())
+}
+
+model Course {
+  id           String        @id @default(uuid())
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id])
+  title        String
+  description  String
+  modules      Json
+  enrollments  Enrollment[]
+  certificates Certificate[]
+}
+
+model Enrollment {
+  id       String @id @default(uuid())
+  userId   String
+  courseId String
+  status   String @default("IN_PROGRESS")
+  user     User   @relation(fields: [userId], references: [id])
+  course   Course @relation(fields: [courseId], references: [id])
+}
+
+model Certificate {
+  id            String   @id @default(uuid())
+  certificateNo String   @unique
+  userId        String
+  courseId      String
+  issuedAt      DateTime @default(now())
+  fileUrl       String
+  user          User     @relation(fields: [userId], references: [id])
+  course        Course   @relation(fields: [courseId], references: [id])
+}
+
+// Fitur AI Consultant
+model Consultation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  chatLogs  Json     // Menyimpan percakapan user dengan AI
+  summary   String?  // Hasil analisa AI
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  USER
+  COMPANY_ADMIN
+  SUPER_ADMIN
+}
