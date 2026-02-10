@@ -5,8 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CompaniesService {
   constructor(private prisma: PrismaService) {}
 
+  // BUAT PERUSAHAAN BARU
   async create(data: any) {
-    // Pastikan ini me-return hasil create agar ID-nya bisa diambil
     return this.prisma.company.create({
       data: {
         name: data.name,
@@ -15,7 +15,31 @@ export class CompaniesService {
     });
   }
 
+  // LIHAT SEMUA PERUSAHAAN
   async findAll() {
-    return this.prisma.company.findMany();
+    return this.prisma.company.findMany({
+      include: { jobs: true }
+    });
+  }
+
+  // LIHAT DAFTAR PELAMAR DI PERUSAHAAN INI
+  async getApplicants(companyId: string) {
+    return this.prisma.jobPosting.findMany({
+      where: { companyId },
+      include: {
+        applications: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true
+              }
+            }
+          }
+        }
+      }
+    });
   }
 }

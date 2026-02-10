@@ -1,47 +1,48 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ApplicationsService {
   constructor(private prisma: PrismaService) {}
 
-  async applyJob(userId: number, jobId: string) {
-    // Pastikan userId dicari sebagai angka (Int)
-    const user = await this.prisma.user.findUnique({ 
-      where: { id: userId } 
-    });
-    if (!user) throw new BadRequestException('User tidak ditemukan');
-
-    const job = await this.prisma.jobPosting.findUnique({ 
-      where: { id: jobId } 
-    });
-    if (!job) throw new BadRequestException('Lowongan tidak ditemukan');
-
-    // Cek duplikasi
-    const existing = await this.prisma.application.findFirst({
-      where: { 
-        userId: userId, 
-        jobId: jobId 
-      },
-    });
-    if (existing) throw new BadRequestException('Anda sudah melamar di posisi ini!');
-
+  // 1. KIRIM LAMARAN
+  async create(data: { userId: number; jobId: string }) {
     return this.prisma.application.create({
       data: {
-        userId,
-        jobId,
+        userId: data.userId,
+        jobId: data.jobId,
+        status: 'PENDING',
       },
     });
   }
 
-  async findMyApplications(userId: number) {
+  // 2. LIHAT SEMUA LAMARAN (Admin)
+  async findAll() {
     return this.prisma.application.findMany({
-      where: { userId: userId },
       include: {
+        user: true,
         job: {
-          include: { company: true },
+          include: { company: true }
         },
       },
     });
+  }
+
+  // 3. UPDATE STATUS LAMARAN
+  async updateStatus(id: string, status: string) {
+    const validStatuses = ['PENDING', 'INTERVIEW', 'ACCEPTED', 'REJECTED'];
+    
+    if (!validStatuses.includes(status.toUpperCase())) {
+      throw new BadRequestException(`Status harus salah satu dari: ${validStatuses.join(', ')}`);
+    }
+
+    try {
+      return await this.prisma.application.update({
+        where: { id: Number(id) }, // <--- DI SINI PERBAIKANNYA: Paksa jadi Number
+        data: { status: status.toUpperCase() },
+      });
+    } catch (error) {
+      throw new NotFoundException('ID Lamaran tidak ditemukan!');
+    }
   }
 }

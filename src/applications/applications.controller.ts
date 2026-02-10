@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Patch, Param } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 
 @Controller('applications')
@@ -6,13 +6,21 @@ export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
   @Post()
-  apply(@Body() data: { userId: number; jobId: string }) {
-    // Memastikan userId benar-benar angka sebelum dikirim ke service
-    return this.applicationsService.applyJob(Number(data.userId), data.jobId);
+  create(@Body() data: { userId: number; jobId: string }) {
+    return this.applicationsService.create(data);
   }
 
-  @Get(':userId')
-  myApplications(@Param('userId') userId: string) {
-    return this.applicationsService.findMyApplications(Number(userId));
+  @Get()
+  findAll() {
+    return this.applicationsService.findAll();
+  }
+
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id') id: string, 
+    @Body() body: { status: string }
+  ) {
+    // Pastikan body status dikirim dengan benar
+    return this.applicationsService.updateStatus(id, body.status);
   }
 }

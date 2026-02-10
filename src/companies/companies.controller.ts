@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 
 @Controller('companies')
@@ -13,5 +13,11 @@ export class CompaniesController {
   @Get()
   findAll() {
     return this.companiesService.findAll();
+  }
+
+  // Endpoint: GET /companies/:id/applicants
+  @Get(':id/applicants')
+  getApplicants(@Param('id') id: string) {
+    return this.companiesService.getApplicants(id);
   }
 }
