@@ -1,58 +1,70 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+generator client {
+  provider = "prisma-client-js"
+}
 
-@Injectable()
-export class UsersService {
-  constructor(private prisma: PrismaService) {}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-  // 1. LIHAT PROFIL (Gabungkan tabel User + UserProfile)
-  async getMyProfile(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        profile: true, // <--- INI KUNCINYA: Ambil data dari tabel UserProfile juga
-      },
-    });
-  }
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  name         String?       
+  phone        String?       
+  role         String        @default("USER") // Tambahkan ini
+  profile      UserProfile?
+  chats        ChatHistory[] 
+  applications Application[]
+}
 
-  // 2. UPDATE PROFIL (Update User sekaligus Upsert Profile)
-  async updateProfile(userId: string, data: any) {
-    
-    // Konversi Skills: Kalau dikirim "Las, Supir" (String), ubah jadi ["Las", "Supir"] (Array)
-    // Karena di Schema kamu tipe skills adalah String[]
-    let skillsData = data.skills;
-    if (typeof data.skills === 'string') {
-      skillsData = data.skills.split(',').map(s => s.trim());
-    }
+model UserProfile {
+  id         Int     @id @default(autoincrement())
+  bio        String?
+  skills     String?
+  education  String? 
+  userId     Int     @unique
+  user       User    @relation(fields: [userId], references: [id])
+}
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        // Data yang ada di tabel User
-        fullName: data.fullName,
-        phoneNumber: data.phoneNumber, 
+model ChatHistory {
+  id        Int      @id @default(autoincrement())
+  message   String
+  response  String
+  createdAt DateTime @default(now())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+}
 
-        // Data yang ada di tabel UserProfile (Relasi)
-        profile: {
-          upsert: {
-            // Kalau profil belum ada, BUAT BARU
-            create: {
-              bio: data.bio,
-              lastEdu: data.lastEdu,
-              skills: skillsData || [],
-            },
-            // Kalau profil sudah ada, UPDATE SAJA
-            update: {
-              bio: data.bio,
-              lastEdu: data.lastEdu,
-              skills: skillsData,
-            },
-          },
-        },
-      },
-      include: {
-        profile: true // Tampilkan hasil updatenya
-      }
-    });
-  }
+model Company {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  isVerified  Boolean      @default(false)
+  jobs        JobPosting[]
+}
+
+model JobPosting {
+  id           String        @id @default(uuid())
+  position     String
+  requirements String?
+  salaryRange  String?
+  location     String?
+  postedAt     DateTime      @default(now())
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id])
+  applications Application[]
+}
+
+model Application {
+  id        Int      @id @default(autoincrement())
+  status    String   @default("APPLIED")
+  appliedAt DateTime @default(now())
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+
+  jobId     String
+  job       JobPosting @relation(fields: [jobId], references: [id])
 }

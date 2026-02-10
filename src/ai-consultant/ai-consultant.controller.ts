@@ -1,24 +1,20 @@
 import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
-import { AiConsultantService } from './ai-consultant.service';
-import { AuthGuard } from '@nestjs/passport';
+import { AiConsultantService } from './ai-consultant.service'; // Pastikan nama ini cocok
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('ai-consultant')
 export class AiConsultantController {
-  constructor(private readonly aiService: AiConsultantService) {}
+  constructor(private readonly aiConsultantService: AiConsultantService) {}
 
-  // 1. ENDPOINT CHAT (POST)
-  // Cara panggil: POST http://localhost:3000/ai-consultant/chat
-  @UseGuards(AuthGuard('jwt')) // Hanya user login
-  @Post('chat')
-  async chat(@Request() req, @Body() body: { message: string }) {
-    return this.aiService.chat(req.user.userId, body.message);
+  @UseGuards(JwtAuthGuard)
+  @Post('ask')
+  async askAi(@Request() req, @Body('prompt') prompt: string) {
+    return this.aiConsultantService.askAi(req.user.userId, prompt);
   }
 
-  // 2. ENDPOINT HISTORY (GET) - BARU!
-  // Cara panggil: GET http://localhost:3000/ai-consultant/history
-  @UseGuards(AuthGuard('jwt')) // Hanya user login
+  @UseGuards(JwtAuthGuard)
   @Get('history')
   async getHistory(@Request() req) {
-    return this.aiService.getHistory(req.user.userId);
+    return this.aiConsultantService.getHistory(req.user.userId);
   }
 }

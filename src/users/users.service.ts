@@ -5,50 +5,32 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. LIHAT PROFIL (Perbaikan: Mengambil relasi profile)
-  async getMyProfile(userId: string) {
+  // Tambahkan ini untuk memperbaiki error getMyProfile
+  async getMyProfile(userId: number) {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        profile: true, // <--- KITA AMBIL DARI TABEL SEBELAH (UserProfile)
-      },
+      include: { profile: true },
     });
   }
 
-  // 2. UPDATE PROFIL (Perbaikan: Pakai teknik Upsert ke tabel UserProfile)
-  async updateProfile(userId: string, data: any) {
-    
-    // Jaga-jaga kalau skills dikirim sebagai string "Las, Supir"
-    let skillsData = data.skills;
-    if (typeof data.skills === 'string') {
-      skillsData = data.skills.split(',').map(s => s.trim());
-    }
-
+  async updateProfile(userId: number, data: any) {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        // Update data dasar di tabel User
-        fullName: data.fullName,
-        phoneNumber: data.phoneNumber,
-
-        // Update/Buat data di tabel UserProfile
         profile: {
           upsert: {
             create: {
               bio: data.bio,
-              lastEdu: data.lastEdu,
-              skills: skillsData || [],
+              skills: data.skills,
+              education: data.education,
             },
             update: {
               bio: data.bio,
-              lastEdu: data.lastEdu,
-              skills: skillsData,
+              skills: data.skills,
+              education: data.education,
             },
           },
         },
-      },
-      include: {
-        profile: true, // Kembalikan data profil terbaru
       },
     });
   }
